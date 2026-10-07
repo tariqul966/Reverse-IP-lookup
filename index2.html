@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reverse IP Lookup - ViewDNS Style</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 text-gray-800 min-h-screen flex flex-col items-center justify-center p-4">
+
+    <!-- Main Container -->
+    <div class="max-w-2xl w-full bg-white rounded-lg shadow-md p-6 border border-gray-200">
+        
+        <!-- Header -->
+        <h1 class="text-2xl font-bold text-gray-900 mb-1">Reverse IP Lookup</h1>
+        <p class="text-gray-600 text-sm mb-6">Find all domains hosted on a given IP address.</p>
+
+        <!-- Form -->
+        <form id="lookupForm" class="flex flex-col sm:flex-row gap-2 mb-6">
+            <input 
+                type="text" 
+                id="ipInput" 
+                placeholder="Enter Domain or IP address" 
+                required
+                class="flex-1 border border-gray-300 rounded px-4 py-2 text-gray-800 focus:outline-none focus:border-emerald-600"
+            />
+            <button 
+                type="submit" 
+                id="submitBtn"
+                class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-6 py-2 rounded transition duration-150"
+            >
+                Lookup
+            </button>
+        </form>
+
+        <!-- Status / Loading -->
+        <div id="status" class="hidden text-sm text-gray-600 mb-4">Searching records... Please wait.</div>
+
+        <!-- Result Box -->
+        <div id="resultBox" class="hidden border-t border-gray-200 pt-4">
+            <h2 id="resultTitle" class="text-base font-semibold text-gray-800 mb-3"></h2>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm border-collapse">
+                    <thead>
+                        <tr class="bg-gray-50 border-b border-gray-200">
+                            <th class="py-2 px-3 font-semibold text-gray-700">DOMAIN NAME</th>
+                        </tr>
+                    </thead>
+                    <tbody id="domainList" class="divide-y divide-gray-100">
+                        <!-- Domains will be inserted here dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        const form = document.getElementById('lookupForm');
+        const ipInput = document.getElementById('ipInput');
+        const status = document.getElementById('status');
+        const resultBox = document.getElementById('resultBox');
+        const resultTitle = document.getElementById('resultTitle');
+        const domainList = document.getElementById('domainList');
+        const submitBtn = document.getElementById('submitBtn');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const query = ipInput.value.trim();
+            if (!query) return;
+
+            // UI Reset
+            status.classList.remove('hidden', 'text-red-600');
+            status.classList.add('text-gray-600');
+            status.textContent = 'Searching records... Please wait.';
+            resultBox.classList.add('hidden');
+            domainList.innerHTML = '';
+            submitBtn.disabled = true;
+
+            try {
+                // Fetching Reverse IP Data
+                const response = await fetch(`https://api.hackertarget.com/reverseiplookup/?q=${encodeURIComponent(query)}`);
+                const data = await response.text();
+
+                if (data.includes("API count exceed") || data.includes("error")) {
+                    status.textContent = 'API limit reached or invalid host provided.';
+                    status.classList.add('text-red-600');
+                } else if (data.trim() === "" || data.includes("No records found")) {
+                    status.textContent = 'No domains found for this IP / Host.';
+                } else {
+                    status.classList.add('hidden');
+                    
+                    const domains = data.trim().split('\n');
+                    resultTitle.textContent = `Reverse IP results for ${query} (${domains.length} domains found)`;
+                    
+                    domains.forEach(domain => {
+                        const tr = document.createElement('tr');
+                        tr.className = 'hover:bg-gray-50';
+                        tr.innerHTML = `<td class="py-2 px-3 text-emerald-700 font-mono">${domain}</td>`;
+                        domainList.appendChild(tr);
+                    });
+
+                    resultBox.classList.remove('hidden');
+                }
+            } catch (err) {
+                status.textContent = 'Failed to retrieve data. Please check your internet connection.';
+                status.classList.add('text-red-600');
+            } finally {
+                submitBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
